@@ -1,6 +1,7 @@
-# NasherMiles AI - Private Project
+# Conversational AI Agentic Bot with Workflows
 
-A private AI-powered customer service and automation system for NasherMiles, a premium travel accessories retailer.
+A private AI-powered customer service and automation system, a premium travel accessories retailer.
+Workflow/Use cases details metioned in Workflows.docx
 
 ## 🚀 Project Overview
 
