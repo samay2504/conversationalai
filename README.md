@@ -5,7 +5,7 @@ Workflow/Use cases details metioned in Workflows.docx
 
 ## 🚀 Project Overview
 
-NasherMiles AI is a sophisticated customer service and automation platform that combines AI capabilities with various business systems to provide seamless customer interactions and efficient operations. The system is designed to handle customer inquiries, order management, social media automation, and more.
+This Conversational AI is a sophisticated customer service and automation platform that combines AI capabilities with various business systems to provide seamless customer interactions and efficient operations. The system is designed to handle customer inquiries, order management, social media automation, and more.
 
 ## 🔐 Security Notice
 
