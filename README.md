@@ -9,7 +9,7 @@ This Conversational AI is a sophisticated customer service and automation platfo
 
 ## 🔐 Security Notice
 
-This is a private project. Please ensure:
+This is a personal project. Do ensure:
 - Never share credentials or sensitive information
 - Keep `.env` and `credentials.json` secure
 - Follow security protocols strictly
