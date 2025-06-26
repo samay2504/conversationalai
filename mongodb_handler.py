@@ -22,7 +22,7 @@ logging.basicConfig(filename='mongodb_handler_errors.log',
 # Retrieve MongoDB connection string from environment or default to the Atlas URI
 MONGODB_CONNECTION_STRING = os.environ.get(
     "MONGODB_CONNECTION_STRING",
-    "mongodb+srv://gogizmo:root@cluster.akp9e.mongodb.net/?retryWrites=true&w=majority&appName=Cluster"
+    ""
 )
 
 try:
