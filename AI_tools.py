@@ -51,7 +51,7 @@ load_dotenv()
 SHOP_NAME = os.getenv("SHOP_NAME")
 ACCESS_TOKEN = os.getenv("SHOPIFY_ACCESS_TOKEN")
 SHOP_BASE_URL = f"https://{SHOP_NAME}.myshopify.com/admin/api/2025-04"
-CLICKPOST_API_KEY = os.getenv("CLICKPOST_API_KEY", "ac299bb3-f8af-472d-8068-a0823e2d2ff4")
+CLICKPOST_API_KEY = os.getenv("CLICKPOST_API_KEY", "")
 CLICKPOST_USERNAME = os.getenv("CLICKPOST_USERNAME", "nashermiles")
 CLICKPOST_TRACK_API_URL = "https://api.clickpost.in/api/v2/track-order/"
 FRESHDESK_API_KEY = os.getenv("FRESHDESK_API_KEY")
