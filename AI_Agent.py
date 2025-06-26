@@ -64,15 +64,15 @@ class AsyncAIBot:
         This includes the Google API key, LangChain tracing, endpoint, API key, project name, and model name.
         If any of these values are not set as environment variables, they will be set here.
         """
-        try:
+        try: # here enter your own api keys. 
             os.environ["GOOGLE_API_KEY"] = os.environ.get("GOOGLE_API_KEY")
-            os.environ["LANGFUSE_PUBLIC_KEY"] = "pk-lf-d4d6cebe-f125-430c-974a-7bc8e94972a0"
-            os.environ["LANGFUSE_SECRET_KEY"] = "sk-lf-dfd77cf4-aee0-49f3-b8e8-e67c32c2725d"
+            os.environ["LANGFUSE_PUBLIC_KEY"] = ""
+            os.environ["LANGFUSE_SECRET_KEY"] = ""
             os.environ["LANGFUSE_HOST"] = "https://us.cloud.langfuse.com"
             os.environ["LANGSMITH_TRACING"] = "true"
             os.environ["LANGSMITH_ENDPOINT"] = "https://api.smith.langchain.com"
-            os.environ["LANGSMITH_API_KEY"] = "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"
-            os.environ["LANGSMITH_PROJECT"] = "pr-dear-octagon-15"
+            os.environ["LANGSMITH_API_KEY"] = ""
+            os.environ["LANGSMITH_PROJECT"] = ""
         except Exception as e:
             logging.error(f"Error setting up environment: {e}", exc_info=True)
     @observe()
