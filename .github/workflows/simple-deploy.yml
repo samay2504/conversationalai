@@ -1,0 +1,82 @@
+name: Simple Deploy
+
+on:
+  push:
+    branches: [ main ]
+
+    
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: 🧪 Test SSH Connection
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.VM_HOST }}
+        username: ${{ secrets.VM_USER }}
+        key: ${{ secrets.DEPLOY_KEY }}
+        script: |
+          echo "✅ SSH connection successful!"
+          echo "📍 Current directory: $(pwd)"
+          echo "👤 Current user: $(whoami)"
+          echo "🐳 Docker version: $(docker --version || echo 'Docker not found')"
+          echo "💾 Available space: $(df -h ~ | tail -1)"
+    
+    - name: 📁 Copy code to VM
+      uses: appleboy/scp-action@v0.1.5
+      with:
+        host: ${{ secrets.VM_HOST }}
+        username: ${{ secrets.VM_USER }}
+        key: ${{ secrets.DEPLOY_KEY }}
+        source: "."
+        target: "/home/${{ secrets.VM_USER }}/nashermiles-ai"
+        
+    - name: 🔨 Build and Deploy
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.VM_HOST }}
+        username: ${{ secrets.VM_USER }}
+        key: ${{ secrets.DEPLOY_KEY }}
+        script: |
+          echo "🔄 Starting deployment..."
+          cd /home/${{ secrets.VM_USER }}/nashermiles-ai
+          
+          # Stop existing container
+          docker stop nashermiles-ai 2>/dev/null || echo "No container to stop"
+          docker rm nashermiles-ai 2>/dev/null || echo "No container to remove"
+          
+          # Remove old image
+          docker rmi nashermiles-ai:local 2>/dev/null || echo "No image to remove"
+          
+          # Test Redis connectivity from Docker container
+          echo "🔍 Testing Redis connectivity from Docker container..."
+          docker run --rm --network=host redis:alpine redis-cli -h localhost -p 6379 ping
+          if [ $? -eq 0 ]; then
+            echo "✅ Redis is accessible from Docker container"
+          else
+            echo "❌ Redis connectivity test failed - cannot connect to localhost:6379"
+            echo "Please ensure Redis is running on the VM at localhost:6379"
+            exit 1
+          fi
+          
+          # Build new image
+          echo "🔨 Building Docker image..."
+          docker build -t nashermiles-ai:local . || exit 1
+          
+          # Run new container
+          echo "🚀 Starting new container..."
+          docker run -d --name nashermiles-ai --network=host --restart=unless-stopped nashermiles-ai:local
+          
+          # Check if container is running
+          sleep 5
+          if docker ps | grep nashermiles-ai; then
+            echo "✅ Container is running successfully!"
+          else
+            echo "❌ Container failed to start"
+            docker logs nashermiles-ai
+            exit 1
+          fi

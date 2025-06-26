@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Chat History - Ribbons AI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Space Mono', monospace;
+            background-color: #0d0d0d;
+            color: #e0e0e0;
+            padding-top: 20px;
+        }
+        .container {
+            max-width: 900px;
+        }
+        .card {
+            background: #1e1e1e;
+            border-radius: 16px;
+            box-shadow: 0 0 20px rgba(255, 165, 0, 0.2);
+            margin-bottom: 20px;
+        }
+        .card-header {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #ffb300; /* Gold accent */
+            text-shadow: 0 0 10px #ff9800;
+            background-color: #161616;
+            border-bottom: 1px solid #333;
+            padding: 20px;
+            text-align: center;
+        }
+        .user-stats-section, .messages-section {
+            padding: 20px;
+        }
+        .user-stats-section h5 {
+            color: #ffb300;
+            margin-bottom: 15px;
+        }
+        .stat-item {
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+        .stat-label {
+            font-weight: bold;
+            color: #aaa;
+        }
+        .messages-list {
+            list-style-type: none;
+            padding: 0;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .message-item {
+            background-color: #2a2a2a;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid #ffb300;
+        }
+        .message-text {
+            color: #e0e0e0;
+            margin-bottom: 5px;
+        }
+        .message-meta {
+            font-size: 0.8em;
+            color: #888;
+        }
+        .loading-state, .error-state, .no-data-state {
+            text-align: center;
+            padding: 50px;
+            font-size: 1.2em;
+            color: #aaa;
+        }
+        .error-state {
+            color: #ff6b6b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                Chat History for User: <span id="user-id-display">{{ user_id }}</span>
+            </div>
+            
+            <div id="user-stats-container" class="user-stats-section">
+                <div class="loading-state">Loading user statistics...</div>
+            </div>
+            
+            <hr style="border-color: #333;">
+
+            <div id="messages-container" class="messages-section">
+                <h5 style="color: #ffb300;">Messages</h5>
+                <div class="loading-state">Loading messages...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const userId = "{{ user_id }}"; // Get user_id from template
+
+        async function fetchChatHistory() {
+            const statsContainer = document.getElementById('user-stats-container');
+            const messagesContainer = document.getElementById('messages-container').querySelector('.loading-state, .error-state, .no-data-state, .messages-list');
+            
+            // Clear previous states before showing loading
+            statsContainer.innerHTML = '<div class="loading-state">Loading user statistics...</div>';
+            if (messagesContainer.classList.contains('messages-list')) {
+                 messagesContainer.parentElement.innerHTML = '<h5 style="color: #ffb300;">Messages</h5><div class="loading-state">Loading messages...</div>';
+            } else {
+                 messagesContainer.innerHTML = '<div class="loading-state">Loading messages...</div>';
+            }
+
+            try {
+                const response = await fetch(`/api/user-chat-history/${userId}`);
+                if (!response.ok) {
+                     if (response.status === 404) {
+                        throw new Error(`User not found or no history available. (404)`);
+                    }
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+
+                renderUserStats(data.stats);
+                renderMessages(data.messages);
+
+            } catch (error) {
+                console.error('Error fetching chat history:', error);
+                statsContainer.innerHTML = `<div class="error-state">Failed to load user statistics. ${escapeHtml(error.message)}</div>`;
+                const msgContainerParent = document.getElementById('messages-container');
+                msgContainerParent.innerHTML = `<h5 style="color: #ffb300;">Messages</h5><div class="error-state">Failed to load messages. ${escapeHtml(error.message)}</div>`;
+            }
+        }
+
+        function renderUserStats(stats) {
+            const container = document.getElementById('user-stats-container');
+            if (!stats) {
+                container.innerHTML = '<div class="no-data-state">No statistics found for this user.</div>';
+                return;
+            }
+            // Ensure _id is not displayed if it's just a mongo ObjectId
+            const displayUserId = stats._id === userId ? userId : stats._id; 
+
+            container.innerHTML = `
+                <h5>User Statistics</h5>
+                <div class="stat-item"><span class="stat-label">User ID:</span> ${escapeHtml(displayUserId)}</div>
+                <div class="stat-item"><span class="stat-label">Name:</span> ${escapeHtml(stats.name || 'N/A')}</div>
+                <div class="stat-item"><span class="stat-label">Instagram Username:</span> ${escapeHtml(stats.instagram_username || 'N/A')}</div>
+                <div class="stat-item"><span class="stat-label">Followers:</span> ${escapeHtml(String(stats.followers !== undefined ? stats.followers : 'N/A'))}</div>
+                <div class="stat-item"><span class="stat-label">Following:</span> ${escapeHtml(String(stats.following !== undefined ? stats.following : 'N/A'))}</div>
+                <div class="stat-item"><span class="stat-label">Last Seen:</span> ${escapeHtml(stats.last_seen ? new Date(stats.last_seen).toLocaleString() : 'N/A')}</div>
+            `;
+        }
+
+        function renderMessages(messages) {
+            const containerParent = document.getElementById('messages-container');
+            if (!messages || messages.length === 0) {
+                containerParent.innerHTML = '<h5 style="color: #ffb300;">Messages</h5><div class="no-data-state">No messages found for this user.</div>';
+                return;
+            }
+
+            let messagesHTML = '<ul class="messages-list">';
+            messages.forEach(msg => {
+                const date = new Date(msg.timestamp);
+                const formattedTimestamp = msg.timestamp ? date.toLocaleString() : 'N/A';
+                messagesHTML += `
+                    <li class="message-item">
+                        <div class="message-text">${escapeHtml(msg.message_text)}</div>
+                        <div class="message-meta">
+                            <span>To: ${escapeHtml(msg.recipient_id)}</span> | 
+                            <span>${formattedTimestamp}</span>
+                        </div>
+                    </li>
+                `;
+            });
+            messagesHTML += '</ul>';
+            containerParent.innerHTML = '<h5 style="color: #ffb300;">Messages</h5>' + messagesHTML;
+        }
+
+        function escapeHtml(unsafe) {
+            if (unsafe === null || typeof unsafe === 'undefined') return '';
+            return unsafe.toString()
+                 .replace(/&/g, "&amp;")
+                 .replace(/</g, "&lt;")
+                 .replace(/>/g, "&gt;")
+                 .replace(/"/g, "&quot;")
+                 .replace(/'/g, "&#039;");
+        }
+
+        document.addEventListener('DOMContentLoaded', fetchChatHistory);
+    </script>
+</body>
+</html> 

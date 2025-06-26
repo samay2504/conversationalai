@@ -1,0 +1,174 @@
+<!-- templates/chat.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat with {{ user_id }}</title>
+  <link rel="stylesheet" href="/static/css/chat_style.css">
+</head>
+<body>
+  <div class="chat-container">
+    <div class="messages-list" id="messages-list"></div>
+    <!-- Optional: Input area can be added here -->
+    <!--
+    <div class="chat-input-area">
+      <input type="text" placeholder="Type a message...">
+      <button>Send</button>
+    </div>
+    -->
+  </div>
+  <script>
+    const userId = "{{ user_id }}";
+    let lastTimestamp = 0;
+    let lastInactiveTime = null;
+
+    function appendMessages(messages) {
+      const container = document.getElementById('messages-list');
+      let lastDate = null;
+      messages.forEach(msg => {
+        const dt = new Date(msg.timestamp);
+        const date = dt.toLocaleDateString();
+        const time = dt.toLocaleTimeString([], { hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        // Insert date separator once
+        if (msg.timestamp > lastTimestamp || lastTimestamp === 0) {
+          if (date !== lastDate) {
+            const sep = document.createElement('div');
+            sep.className = 'date-separator';
+            sep.textContent = date;
+            container.appendChild(sep);
+            lastDate = date;
+          }
+        }
+        // Message
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `message ${msg.role}`;
+        const bubble = document.createElement('div');
+        bubble.className = 'bubble';
+        if (msg.type === 'text') {
+          bubble.textContent = msg.content;
+        } else if (['post', 'share', 'attachment', 'image'].includes(msg.type)) {
+          const wrapper = document.createElement('div');
+          wrapper.className = 'image-wrapper';
+
+          const loadImageBtn = document.createElement('div');
+          loadImageBtn.className = 'load-image-button';
+          loadImageBtn.textContent = '🖼️';
+          loadImageBtn.title = 'Load Image';
+          loadImageBtn.style.cursor = 'pointer';
+          loadImageBtn.style.fontSize = '2em';
+          loadImageBtn.style.textAlign = 'center';
+          loadImageBtn.style.padding = '10px 0';
+
+          wrapper.appendChild(loadImageBtn);
+          bubble.appendChild(wrapper);
+
+          loadImageBtn.addEventListener('click', (event) => {
+            event.stopPropagation();
+            const img = document.createElement('img');
+            img.src = `/media/?url=${encodeURIComponent(msg.content)}`;
+
+            img.onerror = () => {
+              wrapper.innerHTML = '<p style="color: #555; text-align: center; padding: 10px;">Could not load image.</p>';
+            };
+
+            wrapper.innerHTML = '';
+            wrapper.appendChild(img);
+          });
+        } else if (['reel','ig_reel','video'].includes(msg.type)) {
+          // Custom play-button wrapper to defer loading
+          if (msg.title) {
+            const titleDiv = document.createElement('div');
+            titleDiv.className = 'reel-title';
+            titleDiv.textContent = msg.title;
+            bubble.appendChild(titleDiv);
+          }
+          const wrapper = document.createElement('div');
+          wrapper.className = 'video-wrapper';
+          // play button overlay
+          const playBtn = document.createElement('div');
+          playBtn.className = 'play-button';
+          playBtn.textContent = '▶';
+          wrapper.appendChild(playBtn);
+          bubble.appendChild(wrapper);
+
+          playBtn.addEventListener('click', () => {
+            // create actual video element on demand
+            const video = document.createElement('video');
+            video.controls = true;
+            video.autoplay = true;
+            const source = document.createElement('source');
+            source.src = `/media/?url=${encodeURIComponent(msg.content)}`;
+            source.type = 'video/mp4';
+            video.appendChild(source);
+            wrapper.innerHTML = '';
+            wrapper.appendChild(video);
+          });
+        } else if (msg.type === 'video') {
+          const video = document.createElement('video');
+          video.controls = true;
+          const source = document.createElement('source');
+          source.src = msg.content;
+          source.type = 'video/mp4';
+          video.appendChild(source);
+          bubble.appendChild(video);
+        }
+        msgDiv.appendChild(bubble);
+        // Links under bubble
+        if (['post','share','attachment','image'].includes(msg.type)) {
+          const link = document.createElement('a'); link.href = msg.content;
+          link.target = '_blank'; link.className = 'fallback-link'; link.textContent = 'View image';
+          msgDiv.appendChild(link);
+        }
+        if (['reel','ig_reel','video'].includes(msg.type)) {
+          const link = document.createElement('a'); link.href = msg.content;
+          link.target = '_blank'; link.className = 'fallback-link'; link.textContent = 'View video';
+          msgDiv.appendChild(link);
+        }
+        const stamp = document.createElement('div');
+        stamp.className = 'timestamp'; stamp.textContent = time;
+        msgDiv.appendChild(stamp);
+        container.appendChild(msgDiv);
+        // update lastTimestamp
+        lastTimestamp = Math.max(lastTimestamp, msg.timestamp);
+      });
+      // scroll down
+      container.scrollTop = container.scrollHeight;
+    }
+
+    async function fetchNew() {
+      const url = `/api/chat/${userId}?since=${lastTimestamp}`;
+      const resp = await fetch(url);
+      const newMsgs = await resp.json();
+      if (newMsgs.length) appendMessages(newMsgs);
+    }
+
+    async function initChat() {
+      // load all then start polling
+      const resp = await fetch(`/api/chat/${userId}`);
+      const allMsgs = await resp.json();
+      appendMessages(allMsgs);
+      // poll every 5 sec
+      // Poll every minute
+      setInterval(() => {
+        if (document.hasFocus()) {
+          fetchNew();
+        }
+      }, 60000);
+    }
+
+    window.addEventListener('blur', () => {
+      lastInactiveTime = Date.now();
+    });
+
+    window.addEventListener('focus', () => {
+      if (lastInactiveTime && (Date.now() - lastInactiveTime > 60000)) {
+        fetchNew(); // Immediately fetch new messages if inactive > 1 min
+      }
+      lastInactiveTime = null;
+    });
+
+    document.addEventListener('DOMContentLoaded', initChat);
+  </script>
+</body>
+</html>
